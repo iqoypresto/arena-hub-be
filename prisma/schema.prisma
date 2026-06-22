@@ -1,0 +1,801 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum UserRole {
+  PLAYER
+  VENUE_ORGANIZER
+  SUPER_ADMIN
+}
+
+enum UserGender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum VenueStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum CourtStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PAYMENT_REVIEW
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  UNDER_REVIEW
+  PAID
+  FAILED
+  REFUNDED
+  REJECTED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  MANUAL
+}
+
+enum MatchStatus {
+  OPEN
+  FULL
+  CLOSED
+  CANCELLED
+  COMPLETED
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
+enum PostType {
+  ACTIVITY
+  ACHIEVEMENT
+  MATCH_INVITATION
+}
+
+enum NotificationType {
+  BOOKING
+  PAYMENT
+  MATCH
+  COMMUNITY
+  REVIEW
+  SYSTEM
+}
+
+enum NotificationEntityType {
+  BOOKING
+  PAYMENT
+  MATCH
+  POST
+  REVIEW
+  VENUE
+  SYSTEM
+}
+
+enum ModerationTargetType {
+  USER
+  VENUE
+  COURT
+  POST
+  MATCH
+  REVIEW
+  BOOKING
+  PAYMENT
+}
+
+enum ModerationActionType {
+  APPROVE
+  REJECT
+  SUSPEND
+  ACTIVATE
+  DELETE
+  RESTORE
+  MARK_PAID
+  MARK_FAILED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum SessionType {
+  ACCESS_REFRESH
+  LOGIN_DEVICE
+}
+
+enum SlotSourceType {
+  SYSTEM
+  BOOKING
+  MANUAL
+  BLOCKED
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  BLOCKED
+}
+
+//////////////////////////////////////////////////////
+// USERS & AUTH
+//////////////////////////////////////////////////////
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  username     String       @unique @db.VarChar(50)
+  email        String       @unique @db.VarChar(100)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  fullName     String       @map("full_name") @db.VarChar(100)
+  phoneNumber  String?      @map("phone_number") @db.VarChar(30)
+  avatarUrl    String?      @map("avatar_url")
+  bio          String?
+  city         String?      @db.VarChar(100)
+  gender       UserGender?
+  dateOfBirth  DateTime?    @map("date_of_birth") @db.Date
+  role         UserRole     @default(PLAYER)
+  isVerified   Boolean      @default(false) @map("is_verified")
+  isActive     Boolean      @default(true) @map("is_active")
+  lastLoginAt  DateTime?    @map("last_login_at") @db.Timestamptz(6)
+
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  // auth
+  sessions UserSession[]
+
+  // preferences
+  favoriteSports UserFavoriteSport[]
+
+  // venues
+  ownedVenues    Venue[] @relation("VenueOwner")
+  approvedVenues Venue[] @relation("VenueApprover")
+
+  // bookings
+  bookings          Booking[] @relation("BookingUser")
+  cancelledBookings Booking[] @relation("BookingCancelledBy")
+
+  // payments
+  reviewedPayments    BookingPayment[]   @relation("PaymentReviewer")
+  paymentReviewLogs   PaymentReviewLog[] @relation("PaymentReviewActor")
+
+  // community
+  posts        Post[]
+  postLikes    PostLike[]
+  postComments PostComment[]
+
+  // matches
+  hostedMatches Match[]            @relation("MatchHost")
+  joinedMatches MatchParticipant[]
+
+  // reviews
+  venueReviews VenueReview[]
+
+  // notifications
+  notifications Notification[]
+
+  // moderation
+  moderationLogs ModerationLog[]
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model UserSession {
+  id               String      @id @default(uuid()) @db.Uuid
+  userId           String      @map("user_id") @db.Uuid
+  sessionType      SessionType @default(ACCESS_REFRESH) @map("session_type")
+  refreshTokenHash String?     @map("refresh_token_hash") @db.VarChar(255)
+  userAgent        String?     @map("user_agent")
+  ipAddress        String?     @map("ip_address") @db.VarChar(100)
+  expiresAt        DateTime?   @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime?   @map("revoked_at") @db.Timestamptz(6)
+  lastUsedAt       DateTime?   @map("last_used_at") @db.Timestamptz(6)
+
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+//////////////////////////////////////////////////////
+// SPORTS
+//////////////////////////////////////////////////////
+
+model Sport {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(50)
+  slug      String   @unique @db.VarChar(60)
+  iconUrl   String?  @map("icon_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  favoriteByUsers UserFavoriteSport[]
+  venueSports     VenueSport[]
+  courts          Court[]
+  matches         Match[]
+
+  @@map("sports")
+}
+
+model UserFavoriteSport {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  sportId   String   @map("sport_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sportId])
+  @@map("user_favorite_sports")
+}
+
+//////////////////////////////////////////////////////
+// VENUES
+//////////////////////////////////////////////////////
+
+model Venue {
+  id              String      @id @default(uuid()) @db.Uuid
+  ownerId         String      @map("owner_id") @db.Uuid
+  name            String      @db.VarChar(120)
+  slug            String      @unique @db.VarChar(140)
+  description     String?
+  address         String
+  city            String      @db.VarChar(100)
+  province        String?     @db.VarChar(100)
+  postalCode      String?     @map("postal_code") @db.VarChar(20)
+  latitude        Decimal?    @db.Decimal(10, 7)
+  longitude       Decimal?    @db.Decimal(10, 7)
+  coverImageUrl   String?     @map("cover_image_url")
+  contactPhone    String?     @map("contact_phone") @db.VarChar(30)
+  status          VenueStatus @default(PENDING_APPROVAL)
+  isActive        Boolean     @default(true) @map("is_active")
+  approvedAt      DateTime?   @map("approved_at") @db.Timestamptz(6)
+  approvedBy      String?     @map("approved_by") @db.Uuid
+  rejectionReason String?     @map("rejection_reason")
+
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  owner      User  @relation("VenueOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  approver   User? @relation("VenueApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  images         VenueImage[]
+  sports         VenueSport[]
+  facilities     VenueFacility[]
+  operatingHours VenueOperatingHour[]
+  bankAccounts   OrganizerBankAccount[]
+
+  courts   Court[]
+  bookings Booking[]
+  matches  Match[]
+  reviews  VenueReview[]
+
+  @@index([ownerId])
+  @@index([city])
+  @@index([status])
+  @@index([isActive])
+  @@map("venues")
+}
+
+model VenueImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  venueId   String   @map("venue_id") @db.Uuid
+  imageUrl  String   @map("image_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@map("venue_images")
+}
+
+model VenueSport {
+  id        String   @id @default(uuid()) @db.Uuid
+  venueId   String   @map("venue_id") @db.Uuid
+  sportId   String   @map("sport_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, sportId])
+  @@map("venue_sports")
+}
+
+model VenueFacility {
+  id        String   @id @default(uuid()) @db.Uuid
+  venueId   String   @map("venue_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  iconUrl   String?  @map("icon_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@map("venue_facilities")
+}
+
+model VenueOperatingHour {
+  id        String    @id @default(uuid()) @db.Uuid
+  venueId   String    @map("venue_id") @db.Uuid
+  day       DayOfWeek
+  openTime  String    @map("open_time") @db.VarChar(5)
+  closeTime String    @map("close_time") @db.VarChar(5)
+  isOpen    Boolean   @default(true) @map("is_open")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, day])
+  @@map("venue_operating_hours")
+}
+
+model OrganizerBankAccount {
+  id            String   @id @default(uuid()) @db.Uuid
+  venueId       String   @map("venue_id") @db.Uuid
+  bankName      String   @map("bank_name") @db.VarChar(100)
+  accountName   String   @map("account_name") @db.VarChar(100)
+  accountNumber String   @map("account_number") @db.VarChar(50)
+  isPrimary     Boolean  @default(false) @map("is_primary")
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@map("organizer_bank_accounts")
+}
+
+//////////////////////////////////////////////////////
+// COURTS
+//////////////////////////////////////////////////////
+
+model Court {
+  id           String      @id @default(uuid()) @db.Uuid
+  venueId      String      @map("venue_id") @db.Uuid
+  sportId      String      @map("sport_id") @db.Uuid
+  name         String      @db.VarChar(100)
+  description  String?
+  pricePerHour Decimal     @map("price_per_hour") @db.Decimal(12, 2)
+  status       CourtStatus @default(ACTIVE)
+  isActive     Boolean     @default(true) @map("is_active")
+
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  images         CourtImage[]
+  operatingHours CourtOperatingHour[]
+  availability   CourtAvailabilitySlot[]
+  bookings       Booking[]
+  bookingSlots   BookingSlot[]
+
+  @@index([venueId])
+  @@index([sportId])
+  @@index([status])
+  @@index([isActive])
+  @@map("courts")
+}
+
+model CourtImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  courtId   String   @map("court_id") @db.Uuid
+  imageUrl  String   @map("image_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@map("court_images")
+}
+
+model CourtOperatingHour {
+  id        String    @id @default(uuid()) @db.Uuid
+  courtId   String    @map("court_id") @db.Uuid
+  day       DayOfWeek
+  openTime  String    @map("open_time") @db.VarChar(5)
+  closeTime String    @map("close_time") @db.VarChar(5)
+  isOpen    Boolean   @default(true) @map("is_open")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@unique([courtId, day])
+  @@map("court_operating_hours")
+}
+
+model CourtAvailabilitySlot {
+  id         String         @id @default(uuid()) @db.Uuid
+  courtId    String         @map("court_id") @db.Uuid
+  slotDate   DateTime       @map("slot_date") @db.Date
+  startTime  String         @map("start_time") @db.VarChar(5)
+  endTime    String         @map("end_time") @db.VarChar(5)
+  status     SlotStatus     @default(AVAILABLE)
+  sourceType SlotSourceType @default(SYSTEM) @map("source_type")
+  bookingId  String?        @map("booking_id") @db.Uuid
+  notes      String?
+
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  court   Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  booking Booking? @relation("BookingAvailabilitySlots", fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@unique([courtId, slotDate, startTime])
+  @@index([courtId, slotDate])
+  @@index([status])
+  @@index([bookingId])
+  @@map("court_availability_slots")
+}
+
+//////////////////////////////////////////////////////
+// BOOKINGS
+//////////////////////////////////////////////////////
+
+model Booking {
+  id             String         @id @default(uuid()) @db.Uuid
+  bookingCode    String         @unique @map("booking_code") @db.VarChar(30)
+
+  userId         String         @map("user_id") @db.Uuid
+  venueId        String         @map("venue_id") @db.Uuid
+  courtId        String         @map("court_id") @db.Uuid
+
+  bookingDate    DateTime       @map("booking_date") @db.Date
+
+  subtotalAmount Decimal        @map("subtotal_amount") @db.Decimal(12, 2)
+  adminFeeAmount Decimal        @default(0) @map("admin_fee_amount") @db.Decimal(12, 2)
+  totalAmount    Decimal        @map("total_amount") @db.Decimal(12, 2)
+
+  bookingStatus  BookingStatus  @default(PENDING_PAYMENT) @map("booking_status")
+  paymentStatus  PaymentStatus  @default(PENDING) @map("payment_status")
+
+  expiresAt      DateTime?      @map("expires_at") @db.Timestamptz(6)
+  notes          String?
+
+  confirmedAt    DateTime?      @map("confirmed_at") @db.Timestamptz(6)
+  completedAt    DateTime?      @map("completed_at") @db.Timestamptz(6)
+  cancelledAt    DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy    String?        @map("cancelled_by") @db.Uuid
+  cancelReason   String?        @map("cancel_reason")
+
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  user            User   @relation("BookingUser", fields: [userId], references: [id], onDelete: Restrict)
+  venue           Venue  @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  court           Court  @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  cancelledByUser User?  @relation("BookingCancelledBy", fields: [cancelledBy], references: [id], onDelete: SetNull)
+
+  slots             BookingSlot[]
+  payment           BookingPayment?
+  availabilitySlots CourtAvailabilitySlot[] @relation("BookingAvailabilitySlots")
+
+  @@index([userId, bookingDate])
+  @@index([venueId, bookingDate])
+  @@index([courtId, bookingDate])
+  @@index([bookingStatus])
+  @@index([paymentStatus])
+  @@map("bookings")
+}
+
+model BookingSlot {
+  id        String   @id @default(uuid()) @db.Uuid
+  bookingId String   @map("booking_id") @db.Uuid
+  courtId   String   @map("court_id") @db.Uuid
+  slotDate  DateTime @map("slot_date") @db.Date
+  startTime String   @map("start_time") @db.VarChar(5)
+  endTime   String   @map("end_time") @db.VarChar(5)
+  price     Decimal  @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  court   Court   @relation(fields: [courtId], references: [id], onDelete: Restrict)
+
+  @@unique([courtId, slotDate, startTime])
+  @@index([bookingId])
+  @@index([courtId, slotDate])
+  @@map("booking_slots")
+}
+
+//////////////////////////////////////////////////////
+// PAYMENTS
+//////////////////////////////////////////////////////
+
+model BookingPayment {
+  id              String        @id @default(uuid()) @db.Uuid
+  bookingId       String        @unique @map("booking_id") @db.Uuid
+
+  paymentMethod   PaymentMethod @default(BANK_TRANSFER) @map("payment_method")
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  amount          Decimal       @db.Decimal(12, 2)
+
+  payerName       String?       @map("payer_name") @db.VarChar(100)
+  bankName        String?       @map("bank_name") @db.VarChar(100)
+  senderAccountNo String?       @map("sender_account_no") @db.VarChar(50)
+
+  proofImageUrl   String?       @map("proof_image_url")
+  proofUploadedAt DateTime?     @map("proof_uploaded_at") @db.Timestamptz(6)
+
+  paidAt          DateTime?     @map("paid_at") @db.Timestamptz(6)
+  reviewedAt      DateTime?     @map("reviewed_at") @db.Timestamptz(6)
+  reviewedBy      String?       @map("reviewed_by") @db.Uuid
+  rejectionReason String?       @map("rejection_reason")
+
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  booking    Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewer   User?              @relation("PaymentReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewLogs PaymentReviewLog[]
+
+  @@index([paymentStatus])
+  @@index([reviewedBy])
+  @@map("booking_payments")
+}
+
+model PaymentReviewLog {
+  id         String         @id @default(uuid()) @db.Uuid
+  paymentId  String         @map("payment_id") @db.Uuid
+  actorId    String         @map("actor_id") @db.Uuid
+  fromStatus PaymentStatus? @map("from_status")
+  toStatus   PaymentStatus  @map("to_status")
+  note       String?
+
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  payment BookingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  actor   User           @relation("PaymentReviewActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@index([actorId])
+  @@map("payment_review_logs")
+}
+
+//////////////////////////////////////////////////////
+// COMMUNITY FEED
+//////////////////////////////////////////////////////
+
+model Post {
+  id        String    @id @default(uuid()) @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  postType  PostType  @map("post_type")
+  title     String?   @db.VarChar(150)
+  content   String
+  matchId   String?   @map("match_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  match  Match? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  images   PostImage[]
+  likes    PostLike[]
+  comments PostComment[]
+
+  @@index([authorId])
+  @@index([postType])
+  @@index([matchId])
+  @@map("posts")
+}
+
+model PostImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  imageUrl  String   @map("image_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_images")
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @map("post_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  content   String
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@map("post_comments")
+}
+
+//////////////////////////////////////////////////////
+// MATCH FINDER
+//////////////////////////////////////////////////////
+
+model Match {
+  id               String      @id @default(uuid()) @db.Uuid
+  hostId           String      @map("host_id") @db.Uuid
+  sportId          String      @map("sport_id") @db.Uuid
+  venueId          String?     @map("venue_id") @db.Uuid
+  title            String?     @db.VarChar(150)
+  description      String?
+  matchDate        DateTime    @map("match_date") @db.Date
+  startTime        String      @map("start_time") @db.VarChar(5)
+  endTime          String      @map("end_time") @db.VarChar(5)
+  skillLevel       SkillLevel  @default(ALL_LEVELS) @map("skill_level")
+  neededPlayers    Int         @map("needed_players")
+  participantCount Int         @default(1) @map("participant_count")
+  costPerPlayer    Decimal?    @map("cost_per_player") @db.Decimal(12, 2)
+  status           MatchStatus @default(OPEN)
+
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  host  User   @relation("MatchHost", fields: [hostId], references: [id], onDelete: Restrict)
+  sport Sport  @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  venue Venue? @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  participants MatchParticipant[]
+  posts        Post[]
+
+  @@index([hostId])
+  @@index([sportId])
+  @@index([venueId])
+  @@index([matchDate])
+  @@index([status])
+  @@map("matches")
+}
+
+model MatchParticipant {
+  id       String   @id @default(uuid()) @db.Uuid
+  matchId  String   @map("match_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz(6)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@map("match_participants")
+}
+
+//////////////////////////////////////////////////////
+// REVIEWS
+//////////////////////////////////////////////////////
+
+model VenueReview {
+  id         String    @id @default(uuid()) @db.Uuid
+  venueId    String    @map("venue_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  rating     Int
+  reviewText String?   @map("review_text")
+
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, userId])
+  @@index([venueId])
+  @@index([userId])
+  @@map("venue_reviews")
+}
+
+//////////////////////////////////////////////////////
+// NOTIFICATIONS
+//////////////////////////////////////////////////////
+
+model Notification {
+  id         String                  @id @default(uuid()) @db.Uuid
+  userId     String                  @map("user_id") @db.Uuid
+  type       NotificationType
+  entityType NotificationEntityType? @map("entity_type")
+  entityId   String?                 @map("entity_id") @db.Uuid
+  title      String                  @db.VarChar(150)
+  message    String
+  isRead     Boolean                 @default(false) @map("is_read")
+  readAt     DateTime?               @map("read_at") @db.Timestamptz(6)
+  createdAt  DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([type])
+  @@map("notifications")
+}
+
+//////////////////////////////////////////////////////
+// MODERATION / AUDIT
+//////////////////////////////////////////////////////
+
+model ModerationLog {
+  id         String               @id @default(uuid()) @db.Uuid
+  adminId    String               @map("admin_id") @db.Uuid
+  targetType ModerationTargetType @map("target_type")
+  targetId   String               @map("target_id") @db.Uuid
+  action     ModerationActionType
+  reason     String?
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@map("moderation_logs")
+}

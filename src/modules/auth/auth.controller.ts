@@ -57,3 +57,33 @@ export const meController = async (
     next(error);
   }
 };
+
+export const organizerOnlyController = (
+  _req: Request,
+  res: Response,
+) => {
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Welcome organizer",
+  });
+};
+
+export const adminOnlyController = (
+  _req: Request,
+  res: Response,
+) => {
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Welcome admin",
+  });
+};
+
+export const organizerOrAdminController = (
+  _req: Request,
+  res: Response,
+) => {
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Welcome organizer or admin",
+  });
+};

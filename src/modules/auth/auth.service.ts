@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { ApiError } from "../../utils/ApiError";
+import jwt from "jsonwebtoken";
 
 type RegisterInput = {
   username: string;
@@ -17,7 +18,7 @@ type LoginInput = {
   password: string;
 };
 
-const userSelect = {
+const publicUserSelect = {
   id: true,
   username: true,
   email: true,
@@ -43,7 +44,7 @@ export const registerService = async (payload: RegisterInput) => {
   if (!username || !email || !password || !fullName) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "username, email, password, dan fullName wajib diisi"
+      "username, email, password, dan fullName wajib diisi",
     );
   }
 
@@ -73,7 +74,7 @@ export const registerService = async (payload: RegisterInput) => {
       fullName,
       phoneNumber,
     },
-    select: userSelect,
+    select: publicUserSelect,
   });
 
   return user;
@@ -85,7 +86,7 @@ export const loginService = async (payload: LoginInput) => {
   if (!email || !password) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      "email dan password wajib diisi"
+      "email dan password wajib diisi",
     );
   }
 
@@ -114,8 +115,34 @@ export const loginService = async (payload: LoginInput) => {
     data: {
       lastLoginAt: new Date(),
     },
-    select: userSelect,
+    select: publicUserSelect,
   });
 
-  return updatedUser;
+  const accessToken = jwt.sign(
+    {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+    },
+    env.JWT_SECRET,
+    {
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+    },
+  );
+
+  return {
+    user: updatedUser,
+    accessToken,
+  };
+};
+
+export const meService = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: publicUserSelect,
+  });
+
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+
+  return user;
 };

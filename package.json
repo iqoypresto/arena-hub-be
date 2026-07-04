@@ -4,9 +4,9 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
-    "start": "node dist/app.js"
+    "dev": "nodemon src/app.ts",
+    "build": "tsc && prisma generate",
+    "start": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +14,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -32,7 +33,10 @@
   "dependencies": {
     "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.19.0",
+    "@types/ms": "^2.1.0",
     "bcrypt": "^6.0.0",
+    "bcrypt-ts": "^8.0.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "helmet": "^8.2.0",

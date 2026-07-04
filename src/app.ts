@@ -1,39 +1,32 @@
 import "dotenv/config";
-import express, { NextFunction, Request, Response } from "express";
+import express from "express";
 import cors from "cors";
-import { StatusCodes } from "http-status-codes";
-import { authRouter } from "./modules/auth/auth.router";
-import { ApiError } from "./utils/ApiError";
+import { ErrorMiddleware } from "./middlewares/error.middleware";
+import { env } from "./config/env";
+import cookieParser from "cookie-parser";
+import { AuthRoute } from "./features/auth/auth.route";
 
-export const app = express();
-
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/health", (_req, res) => {
-  return res.status(StatusCodes.OK).json({
-    success: true,
-    message: "ArenaHub API is running",
-  });
-});
-
-app.use("/api/auth", authRouter);
+const app = express();
 
 app.use(
-  (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(err);
-
-    if (err instanceof ApiError) {
-      return res.status(err.statusCode).json({
-        success: false,
-        message: err.message,
-      });
-    }
-
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
+  cors({
+    origin: env.WHITE_LIST,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+  }),
 );
+app.use(express.json());
+
+app.use(cookieParser())
+
+app.use(`${env.API_PREFIX}/auth`, AuthRoute)
+
+app.use(ErrorMiddleware);
+
+if(process.env.NODE_ENV === 'development'){
+  app.listen(env.PORT, () => {
+    console.log(`[⚡APP] Application is running on port: ${env.PORT}`);
+  })
+}
+export default app

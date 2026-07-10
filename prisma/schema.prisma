@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,6 +6,138 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String    @id @default(uuid()) @db.Uuid
+  fullName               String
+  email                  String    @unique
+  password               String
+  phoneNumber            String?
+  profilePictureUrl      String?
+  profilePicturePublicId String?
+  role                   UserRole  @default(PLAYER)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+  bookings               Booking[] @relation("PlayerBookings")
+  venue                  Venue?
+
+  @@map("users")
+}
+
+model Venue {
+  id             String          @id @default(uuid()) @db.Uuid
+  venueAdminId   String          @unique @db.Uuid
+  name           String
+  description    String?
+  phoneNumber    String?
+  address        String
+  city           String
+  latitude       Decimal?        @db.Decimal(10, 8)
+  longitude      Decimal?        @db.Decimal(11, 8)
+  bankName       String
+  accountHolder  String
+  accountNumber  String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  courts         Court[]
+  operatingHours OperatingHour[]
+  facilities     VenueFacility[]
+  images         VenueImage[]
+  venueAdmin     User            @relation(fields: [venueAdminId], references: [id])
+
+  @@map("venues")
+}
+
+model OperatingHour {
+  id        String    @id @default(uuid()) @db.Uuid
+  venueId   String    @db.Uuid
+  dayOfWeek DayOfWeek
+  openTime  DateTime  @db.Time(6)
+  closeTime DateTime  @db.Time(6)
+  isClosed  Boolean   @default(false)
+  venue     Venue     @relation(fields: [venueId], references: [id])
+
+  @@unique([venueId, dayOfWeek])
+  @@map("operating_hours")
+}
+
+model VenueImage {
+  id           String   @id @default(uuid()) @db.Uuid
+  venueId      String   @db.Uuid
+  imageUrl     String
+  publicId     String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  venue        Venue    @relation(fields: [venueId], references: [id])
+
+  @@map("venue_images")
+}
+
+model Facility {
+  id     String          @id @default(uuid()) @db.Uuid
+  name   String          @unique
+  icon   String?
+  venues VenueFacility[]
+
+  @@map("facilities")
+}
+
+model VenueFacility {
+  venueId    String   @db.Uuid
+  facilityId String   @db.Uuid
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  venue      Venue    @relation(fields: [venueId], references: [id])
+
+  @@id([venueId, facilityId])
+  @@map("venue_facilities")
+}
+
+model Court {
+  id           String      @id @default(uuid()) @db.Uuid
+  venueId      String      @db.Uuid
+  name         String
+  sportType    SportType
+  pricePerHour Decimal     @db.Decimal(12, 2)
+  status       CourtStatus @default(AVAILABLE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  bookings     Booking[]
+  venue        Venue       @relation(fields: [venueId], references: [id])
+
+  @@unique([venueId, name])
+  @@map("courts")
+  @@index([venueId])
+}
+
+model Booking {
+  id                   String        @id @default(uuid()) @db.Uuid
+  bookingCode          String        @unique
+  playerId             String        @db.Uuid
+  courtId              String        @db.Uuid
+  startDatetime        DateTime
+  endDatetime          DateTime
+  pricePerHour         Decimal       @db.Decimal(12, 2)
+  totalPrice           Decimal       @db.Decimal(12, 2)
+  paymentProofUrl      String?
+  paymentProofPublicId String?
+  paymentDeadline      DateTime?
+  rejectReason         String?
+  status               BookingStatus @default(PENDING_PAYMENT)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  court                Court         @relation(fields: [courtId], references: [id])
+  player               User          @relation("PlayerBookings", fields: [playerId], references: [id])
+
+  @@index([courtId, startDatetime])
+  @@index([playerId, createdAt])
+  @@index([status])
+  @@index([startDatetime])
+  @@index([status, createdAt])
+  @@map("bookings")
 }
 
 enum UserRole {
@@ -37,8 +164,7 @@ enum BookingStatus {
   PENDING_PAYMENT
   WAITING_VERIFICATION
   CONFIRMED
-  REJECTED
-  EXPIRED
+  COMPLETED
   CANCELLED
 }
 
@@ -50,172 +176,4 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
-}
-
-model User {
-  id                String    @id @default(uuid()) @db.Uuid
-  fullName          String
-  email             String    @unique
-  password          String
-  phoneNumber       String?
-  profilePictureUrl String?
-  role              UserRole
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-
-  venue    Venue?
-  bookings Booking[] @relation("PlayerBookings")
-
-  @@map("users")
-}
-
-model Venue {
-  id String @id @default(uuid()) @db.Uuid
-
-  venueAdminId String @unique @db.Uuid
-
-  name        String
-  description String?
-  phoneNumber String?
-  address     String
-  city        String
-
-  latitude  Decimal? @db.Decimal(10, 8)
-  longitude Decimal? @db.Decimal(11, 8)
-
-  bankName      String
-  accountHolder String
-  accountNumber String
-
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-
-  venueAdmin User @relation(fields: [venueAdminId], references: [id])
-
-  operatingHours OperatingHour[]
-  images         VenueImage[]
-  facilities     VenueFacility[]
-  courts         Court[]
-  bookings       Booking[]
-
-  @@map("venues")
-}
-
-model OperatingHour {
-  id String @id @default(uuid()) @db.Uuid
-
-  venueId String @db.Uuid
-
-  dayOfWeek DayOfWeek
-  openTime  DateTime @db.Time
-  closeTime DateTime @db.Time
-
-  isClosed Boolean @default(false)
-
-  venue Venue @relation(fields: [venueId], references: [id])
-
-  @@unique([venueId, dayOfWeek])
-  @@map("operating_hours")
-}
-
-model VenueImage {
-  id String @id @default(uuid()) @db.Uuid
-
-  venueId String @db.Uuid
-
-  imageUrl     String
-  displayOrder Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  venue Venue @relation(fields: [venueId], references: [id])
-
-  @@map("venue_images")
-}
-
-model Facility {
-  id String @id @default(uuid()) @db.Uuid
-
-  name String @unique
-  icon String?
-
-  venues VenueFacility[]
-
-  @@map("facilities")
-}
-
-model VenueFacility {
-  venueId    String @db.Uuid
-  facilityId String @db.Uuid
-
-  venue    Venue    @relation(fields: [venueId], references: [id])
-  facility Facility @relation(fields: [facilityId], references: [id])
-
-  @@id([venueId, facilityId])
-  @@map("venue_facilities")
-}
-
-model Court {
-  id String @id @default(uuid()) @db.Uuid
-
-  venueId String @db.Uuid
-
-  name String
-
-  sportType   SportType
-  pricePerHour Decimal @db.Decimal(12, 2)
-
-  status CourtStatus
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  venue Venue @relation(fields: [venueId], references: [id])
-
-  bookings Booking[]
-
-  @@unique([venueId, name])
-  @@map("courts")
-}
-
-model Booking {
-  id String @id @default(uuid()) @db.Uuid
-
-  bookingCode String @unique
-
-  playerId String @db.Uuid
-  venueId  String @db.Uuid
-  courtId  String @db.Uuid
-
-  startDatetime DateTime
-  endDatetime   DateTime
-
-  pricePerHour Decimal @db.Decimal(12, 2)
-  totalPrice   Decimal @db.Decimal(12, 2)
-
-  paymentProofUrl String?
-  paymentDeadline DateTime?
-
-  rejectReason String?
-
-  status BookingStatus
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  player User @relation("PlayerBookings", fields: [playerId], references: [id])
-  venue  Venue @relation(fields: [venueId], references: [id])
-  court  Court @relation(fields: [courtId], references: [id])
-
-  @@index([courtId, startDatetime])
-  @@index([venueId, startDatetime])
-  @@index([playerId, createdAt])
-
-  @@map("bookings")
 }

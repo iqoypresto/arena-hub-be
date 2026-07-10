@@ -1,19 +1,13 @@
-import bcrypt from "bcrypt";
-import { prisma } from "../../lib/prisma";
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
 import { BcryptUtil } from "../../utils/bcrypt.util";
-import jwt from "jsonwebtoken";
 import { AuthLoginInput, AuthRegisterInput } from "./auth.validation";
-import { env } from "../../config/env";
-import { StringValue } from "ms";
 import { JWTUtil } from "../../utils/jwt.util";
+import { AuthRepository } from "./auth.repository";
 
 export class AuthService {
   static async loginUser({ body }: AuthLoginInput) {
-    const existingUser = await prisma.user.findUnique({
-      where: { email: body.email },
-    });
+    const existingUser = await AuthRepository.findByEmail(body.email);
 
     if (!existingUser)
       throw new ResponseError(
@@ -45,25 +39,28 @@ export class AuthService {
     };
   }
   static async registerUser({ body }: AuthRegisterInput) {
-    const existingUser = await prisma.user.findUnique({
-      where: { email: body.email },
-    });
+    const existingUser = await AuthRepository.findByEmail(body?.email);
 
     if (existingUser)
-      throw new ResponseError(StatusCodes.FORBIDDEN, "Email already exist");
+      throw new ResponseError(StatusCodes.CONFLICT, "Email already exist");
 
     const passwordHashed = await BcryptUtil.hashPassword(body.password);
-    const user = await prisma.user.create({
-      data: {
-        email: body.email,
-        password: passwordHashed,
-        fullName: body.fullName,
-        role: body.role,
-      },
+    const user = await AuthRepository.registerUser({
+      email: body?.email,
+      password: passwordHashed,
+      fullName: body?.fullName,
     });
 
     const { password, ...safeUser } = user;
 
     return safeUser;
+  }
+  static async getMe(id: string) {
+    const user = await AuthRepository.findById(id)
+    if(!user) throw new ResponseError(StatusCodes.NOT_FOUND, "User not found")
+
+    const {password, ...safeUser} = user
+
+    return safeUser
   }
 }

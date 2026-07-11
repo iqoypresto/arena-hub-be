@@ -171,4 +171,18 @@ export class BookingRepository {
         }
     })
   }
+
+  static async completeFinishedBookings(db: DB, now: Date){
+    return db.booking.updateMany({
+      where: {
+        status: BookingStatus.CONFIRMED,
+        endDatetime: {
+          lt: now
+        }
+      },
+      data: {
+        status: BookingStatus.COMPLETED
+      }
+    })
+  }
 }

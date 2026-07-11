@@ -16,9 +16,7 @@ export class AuthValidation {
                 .max(100, 'Fullname must be 10-100 characters'),
             password: z
                 .string()
-                .min(1, "Password is required field"),
-            role: z
-                .enum([UserRole.PLAYER, UserRole.VENUE_ADMIN])
+                .min(1, "Password is required field")
 
         })
     })

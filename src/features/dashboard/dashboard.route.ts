@@ -5,4 +5,4 @@ import { DashboardController } from "./dashboard.controller";
 
 export const DashboardRoute = Router()
 
-DashboardRoute.get('/summary', AuthMiddleware.authenticated, AuthMiddleware.authorized([UserRole.VENUE_ADMIN]), DashboardController.summary)
+DashboardRoute.get('/', AuthMiddleware.authenticated, AuthMiddleware.authorized([UserRole.VENUE_ADMIN]), DashboardController.getDashboard)

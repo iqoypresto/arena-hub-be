@@ -107,4 +107,72 @@ export class DashboardRepository {
       todayRevenue: Number(todayRevenue._sum.totalPrice ?? 0),
     };
   }
+
+  static async getPendingVerifications(venueId: string){
+    return prisma.booking.findMany({
+      where: {
+        status: BookingStatus.WAITING_VERIFICATION,
+        court: {
+          venueId
+        }
+      },
+      select: {
+        id: true,
+        bookingCode: true,
+        startDatetime: true,
+        endDatetime: true,
+        totalPrice: true,
+        updatedAt: true,
+        player: {
+          select: {
+            id: true,
+            fullName: true
+          }
+        },
+        court: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        updatedAt: "asc"
+      },
+      take: 5
+    })
+  }
+  static async getUpcomingBookings(venueId: string, now: Date){
+    return prisma.booking.findMany({
+      where: {
+        status: BookingStatus.CONFIRMED,
+        startDatetime: {
+          gte: now
+        }
+      },
+      select: {
+        id: true,
+        bookingCode: true,
+        startDatetime: true,
+        endDatetime: true,
+        totalPrice: true,
+        player: {
+          select: {
+            id: true,
+            fullName: true
+          }
+        },
+        court: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        startDatetime: "asc"
+      },
+      take: 5
+    })
+  }
 }

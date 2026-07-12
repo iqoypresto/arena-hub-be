@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { DateHelper } from "../../helpers/date.helper";
 
 type BookingWithRelation = Prisma.BookingGetPayload<{
   include: {
@@ -77,9 +78,9 @@ export class BookingMapper {
         id: booking.court.id,
         name: booking.court.name,
       },
-      date: booking.startDatetime.toISOString().split("T")[0],
-      startTime: booking.startDatetime.toISOString().split("T")[1]?.slice(0, 5),
-      endTime: booking.endDatetime.toISOString().split("T")[1]?.slice(0, 5),
+      date: DateHelper.formatDateKey(booking.startDatetime),
+      startTime: DateHelper.formatTime(booking.startDatetime),
+      endTime: DateHelper.formatTime(booking.endDatetime),
       totalPrice: Number(booking.totalPrice),
       status: booking.status,
       paymentDeadline: booking.paymentDeadline,
@@ -94,9 +95,9 @@ export class BookingMapper {
         id: booking.court.id,
         name: booking.court.name,
       },
-      date: booking.startDatetime.toISOString().split("T")[0],
-      startTime: booking.startDatetime.toISOString().split("T")[1]?.slice(0, 5),
-      endTime: booking.endDatetime.toISOString().split("T")[1]?.slice(0, 5),
+      date: DateHelper.formatDateKey(booking.startDatetime),
+      startTime: DateHelper.formatTime(booking.startDatetime),
+      endTime: DateHelper.formatTime(booking.endDatetime),
       totalPrice: Number(booking.totalPrice),
       status: booking.status,
     };
@@ -129,9 +130,9 @@ export class BookingMapper {
         id: booking.court.id,
         name: booking.court.name,
       },
-      date: booking.startDatetime.toISOString().split("T")[0],
-      startTime: booking.startDatetime.toISOString().split("T")[1]?.slice(0, 5),
-      endTime: booking.endDatetime.toISOString().split("T")[1]?.slice(0, 5),
+      date: DateHelper.formatDateKey(booking.startDatetime),
+      startTime: DateHelper.formatTime(booking.startDatetime),
+      endTime: DateHelper.formatTime(booking.endDatetime),
       pricePerHour: Number(booking.pricePerHour),
       totalPrice: Number(booking.totalPrice),
       status: booking.status,
@@ -155,10 +156,9 @@ export class BookingMapper {
         name: booking.court.name,
       },
 
-      date: booking.startDatetime.toISOString().split("T")[0],
-      startTime: booking.startDatetime.toISOString().split("T")[1]?.slice(0, 5),
-
-      endTime: booking.endDatetime.toISOString().split("T")[1]?.slice(0, 5),
+      date: DateHelper.formatDateKey(booking.startDatetime),
+      startTime: DateHelper.formatTime(booking.startDatetime),
+      endTime: DateHelper.formatTime(booking.endDatetime),
 
       totalPrice: Number(booking.totalPrice),
 
@@ -170,54 +170,37 @@ export class BookingMapper {
     return bookings.map((booking) => this.toOrganizerListItem(booking));
   }
 
-  static toOrganizerDetailResponse(booking: OrganizerBookingDetail){
+  static toOrganizerDetailResponse(booking: OrganizerBookingDetail) {
     return {
-        id: booking.id,
+      id: booking.id,
 
-    bookingCode: booking.bookingCode,
+      bookingCode: booking.bookingCode,
 
-    player: {
-      id: booking.player.id,
-      fullName: booking.player.fullName,
-      email: booking.player.email,
-    },
+      player: {
+        id: booking.player.id,
+        fullName: booking.player.fullName,
+        email: booking.player.email,
+      },
 
-    court: booking.court,
+      court: booking.court,
 
-    date: booking.startDatetime
-      .toISOString()
-      .split("T")[0],
+      date: DateHelper.formatDateKey(booking.startDatetime),
+      startTime: DateHelper.formatTime(booking.startDatetime),
+      endTime: DateHelper.formatTime(booking.endDatetime),
 
-    startTime: booking.startDatetime
-      .toISOString()
-      .split("T")[1]!
-      .slice(0, 5),
+      pricePerHour: Number(booking.pricePerHour),
 
-    endTime: booking.endDatetime
-      .toISOString()
-      .split("T")[1]!
-      .slice(0, 5),
+      totalPrice: Number(booking.totalPrice),
 
-    pricePerHour: Number(
-      booking.pricePerHour,
-    ),
+      paymentProofUrl: booking.paymentProofUrl,
 
-    totalPrice: Number(
-      booking.totalPrice,
-    ),
+      paymentDeadline: booking.paymentDeadline,
 
-    paymentProofUrl:
-      booking.paymentProofUrl,
+      rejectReason: booking.rejectReason,
 
-    paymentDeadline:
-      booking.paymentDeadline,
+      status: booking.status,
 
-    rejectReason:
-      booking.rejectReason,
-
-    status: booking.status,
-
-    createdAt: booking.createdAt,
-    }
+      createdAt: booking.createdAt,
+    };
   }
 }

@@ -11,6 +11,12 @@ export class DateHelper {
     DayOfWeek.SATURDAY,
   ];
 
+  static parseDate(date: string): Date {
+    const [year, month, day] = date.split("-").map(Number);
+
+    return new Date(year!, month! - 1, day!);
+  }
+
   static getDayOfWeek(date: Date): DayOfWeek {
     return this.DAYS[date.getDay()]!;
   }
@@ -29,9 +35,29 @@ export class DateHelper {
     return end;
   }
 
-  static addMinutes(date: Date, minutes: number){
-    const result = new Date(date)
-    result.setMinutes(result.getMinutes() + minutes)
-    return result
+  static addMinutes(date: Date, minutes: number): Date {
+    return new Date(date.getTime() + minutes * 60 * 1000);
+  }
+
+  static subtractDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() - days);
+
+    return result;
+  }
+
+  static formatDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  static formatTime(date: Date): string {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
   }
 }

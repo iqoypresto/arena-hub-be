@@ -3,7 +3,6 @@ import { BookingService } from "./booking.service";
 import { StatusCodes } from "http-status-codes";
 import { validate } from "../../validations/validate";
 import { BookingValidation } from "./booking.validation";
-import { success } from "zod";
 
 
 export class BookingController {
@@ -83,7 +82,7 @@ export class BookingController {
     const booking = await BookingService.uploadPayment(payload.sub, {params}, req.file)
 
     res.status(StatusCodes.OK).json({
-      success: "true",
+      success: true,
       message: "Payment proof uploaded successfully",
       data: booking
     })

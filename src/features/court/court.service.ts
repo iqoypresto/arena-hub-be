@@ -10,7 +10,7 @@ import { CourtMapper } from "./court.mapper";
 export class CourtService {
   static async buildCourtAvailability(courtId: string, date: string) {
     const court = await CourtRepository.findCourtById(courtId);
-    const bookingDate = new Date(date);
+    const bookingDate = DateHelper.parseDate(date);
 
     const startOfDay = DateHelper.getStartOfDay(bookingDate);
     const endOfDay = DateHelper.getEndOfDay(bookingDate);
@@ -23,13 +23,13 @@ export class CourtService {
       (item) => item.dayOfWeek === dayOfWeek,
     );
 
-    if (!operatingHours)
+    if (!operatingHours || operatingHours.isClosed)
       throw new ResponseError(StatusCodes.BAD_REQUEST, "Court is closed");
 
     const slots = SlotHelper.generateSlots(
       bookingDate,
-      operatingHours?.openTime!,
-      operatingHours?.closeTime!,
+      operatingHours?.openTime,
+      operatingHours?.closeTime,
     );
 
     const bookings = await CourtRepository.findActiveBookings(

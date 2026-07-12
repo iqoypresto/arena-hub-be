@@ -9,11 +9,13 @@ export class SlotHelper {
   ): SlotAvailability[] {
     const slots: SlotAvailability[] = [];
 
-    const current = bookingDate;
-    current.setUTCHours(openTime.getUTCHours(), openTime.getUTCMinutes(), 0, 0);
+    const current = new Date(bookingDate);
+
+    current.setHours(openTime.getUTCHours(), openTime.getUTCMinutes(), 0, 0);
 
     const closingTime = new Date(bookingDate);
-    closingTime.setUTCHours(
+
+    closingTime.setHours(
       closeTime.getUTCHours(),
       closeTime.getUTCMinutes(),
       0,
@@ -23,8 +25,7 @@ export class SlotHelper {
     while (current < closingTime) {
       const slotStart = new Date(current);
 
-      const slotEnd = new Date(current);
-      slotEnd.setMinutes(slotEnd.getMinutes() + duration);
+      const slotEnd = new Date(current.getTime() + duration * 60 * 1000);
 
       if (slotEnd > closingTime) {
         break;
@@ -36,8 +37,9 @@ export class SlotHelper {
         available: true,
       });
 
-      current.setMinutes(current.getMinutes() + duration);
+      current.setTime(current.getTime() + duration * 60 * 1000);
     }
+
     return slots;
   }
 }

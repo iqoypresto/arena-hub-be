@@ -58,7 +58,12 @@ export class DashboardRepository {
           court: {
             venueId,
           },
-          status: BookingStatus.CONFIRMED,
+          status: {
+            in: [
+              BookingStatus.CONFIRMED,
+              BookingStatus.COMPLETED
+            ]
+          }
         },
       }),
       prisma.booking.count({
@@ -74,7 +79,12 @@ export class DashboardRepository {
           court: {
             venueId,
           },
-          status: BookingStatus.CONFIRMED,
+          status: {
+            in: [
+              BookingStatus.CONFIRMED,
+              BookingStatus.COMPLETED
+            ]
+          },
         },
         _sum: {
           totalPrice: true,
@@ -85,7 +95,12 @@ export class DashboardRepository {
           court: {
             venueId,
           },
-          status: BookingStatus.CONFIRMED,
+          status: {
+            in: [
+              BookingStatus.CONFIRMED,
+              BookingStatus.COMPLETED
+            ]
+          },
           createdAt: {
             gte: startOfDay,
             lte: endOfDay,
@@ -145,6 +160,9 @@ export class DashboardRepository {
   static async getUpcomingBookings(venueId: string, now: Date){
     return prisma.booking.findMany({
       where: {
+        court: {
+          venueId
+        },
         status: BookingStatus.CONFIRMED,
         startDatetime: {
           gte: now
@@ -174,5 +192,34 @@ export class DashboardRepository {
       },
       take: 5
     })
+  }
+
+  static async getRevenueChart(venueId: string, startDate: Date, endDate: Date){
+    const bookings = await prisma.booking.findMany({
+      where:{
+        court: {
+          venueId
+        },
+        status: {
+          in: [
+            BookingStatus.CONFIRMED,
+            BookingStatus.COMPLETED
+          ]
+        },
+        createdAt: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      select: {
+        totalPrice: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    })
+
+    return bookings
   }
 }

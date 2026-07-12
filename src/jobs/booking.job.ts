@@ -6,29 +6,25 @@ export class BookingJob {
   static start() {
     console.log("\n[Booking Job] Started");
 
-    
     cron.schedule("* * * * *", async () => {
       try {
-        const now = new Date()
-        const [cancelledBookings, completedBookings] = await Promise.all([
-          BookingRepository.cancelExpiredBookings(
-            prisma,
-            now,
-          ),
-          BookingRepository.completeFinishedBookings(
-            prisma,
-            now
-          )
-        ])          
+        const now = new Date();
+
+        const cancelledBookings =
+          await BookingRepository.cancelExpiredBookings(prisma, now);
+
+        const completedBookings =
+          await BookingRepository.completeFinishedBookings(prisma, now);
 
         if (cancelledBookings.count > 0) {
           console.log(
             `[Booking Job] ${cancelledBookings.count} expired booking(s) cancelled.`,
           );
         }
+
         if (completedBookings.count > 0) {
           console.log(
-            `[Booking Job] ${completedBookings.count} completed booking(s) cancelled.`,
+            `[Booking Job] ${completedBookings.count} booking(s) completed.`,
           );
         }
       } catch (error) {

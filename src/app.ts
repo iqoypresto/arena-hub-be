@@ -29,15 +29,14 @@ app.use(`${env.API_PREFIX}/auth`, AuthRoute);
 app.use(`${env.API_PREFIX}/venue`, VenueRoute);
 app.use(`${env.API_PREFIX}/court`, CourtRoute);
 app.use(`${env.API_PREFIX}/booking`, BookingRoute);
-app.use(`${env.API_PREFIX}/dashboard`, DashboardRoute)
+app.use(`${env.API_PREFIX}/dashboard`, DashboardRoute);
 
 app.use(ErrorMiddleware);
 
-if (process.env.NODE_ENV === "development") {
-  app.listen(env.PORT, () => {
-    console.log(`[⚡APP] Application is running on port: ${env.PORT}`);
+app.listen(env.PORT, () => {
+  console.log(`[⚡APP] Application is running on port: ${env.PORT}`);
 
-    BookingJob.start()
-  });
-}
+  BookingJob.start();
+});
+
 export default app;

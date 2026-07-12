@@ -47,7 +47,6 @@ export class BookingService {
       Number(court.pricePerHour),
     );
 
-    //
     const paymentDeadline = DateHelper.addMinutes(now, 30);
 
     return prisma.$transaction(async (tx) => {
@@ -61,11 +60,6 @@ export class BookingService {
         now,
         latestBooking?.bookingCode,
       );
-
-      console.log({
-        latest: latestBooking?.bookingCode,
-        generated: bookingCode,
-      });
 
       const conflict = await CourtRepository.findBookingConflict(
         tx,

@@ -52,8 +52,8 @@ export class CourtRepository {
   static async findBookingConflict(
     db: DB,
     courtId: string,
-    startOfDay: Date,
-    endOfDay: Date,
+    startDatetime: Date,
+    endDatetime: Date,
   ) {
     return await db.booking.findFirst({
       where: {
@@ -66,10 +66,10 @@ export class CourtRepository {
           ],
         },
         startDatetime: {
-          lt: endOfDay,
+          lt: endDatetime,
         },
         endDatetime: {
-          gt: startOfDay,
+          gt: startDatetime,
         },
       },
       orderBy: {

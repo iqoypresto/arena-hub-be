@@ -123,7 +123,7 @@ export class BookingRepository {
     const { page, limit, sortBy, order, status } = query;
     const skip = (page - 1) * limit;
     const take = limit;
-    const where = {
+    const where: Prisma.BookingWhereInput = {
       ...(status && { status }),
     };
 

@@ -58,5 +58,6 @@ BookingRoute.patch(
 BookingRoute.get(
   "/:bookingId",
   AuthMiddleware.authenticated,
+  AuthMiddleware.authorized([UserRole.PLAYER, UserRole.VENUE_ADMIN]),
   BookingController.getDetail,
 );

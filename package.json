@@ -5,8 +5,8 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "nodemon src/app.ts",
-    "build": "tsc && prisma generate",
-    "start": "prisma generate"
+    "build": "prisma generate && tsc",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",

@@ -2,6 +2,7 @@ import { Booking, BookingStatus } from "@prisma/client";
 import { SlotAvailability } from "../types/availability-slot.type";
 import { ResponseError } from "../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";
+import { DateHelper } from "./date.helper";
 
 export class BookingHelper {
   static mergeAvailability(slots: SlotAvailability[], bookings: Booking[]) {
@@ -27,7 +28,7 @@ export class BookingHelper {
 
     for (const selected of selectedSlots) {
       const slot = availability.find(
-        (item) => item.startTime.toISOString().slice(11, 16) === selected,
+        (item) => DateHelper.formatTime(item.startTime) === selected
       );
       if (!slot)
         throw new ResponseError(

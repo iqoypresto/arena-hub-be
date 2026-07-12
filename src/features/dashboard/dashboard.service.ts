@@ -1,4 +1,3 @@
-import { JwtPayload } from "jsonwebtoken";
 import { DashboardRepository } from "./dashboard.repository";
 import { ResponseError } from "../../utils/response-error.util";
 import { StatusCodes } from "http-status-codes";

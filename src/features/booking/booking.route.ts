@@ -15,7 +15,7 @@ BookingRoute.post(
     BookingController.create,
 );
 BookingRoute.get(
-    "/me",
+    "/my",
     AuthMiddleware.authenticated,
     AuthMiddleware.authorized([UserRole.PLAYER]),
     BookingController.getMyBookings,

@@ -138,6 +138,7 @@ export class BookingMapper {
       status: booking.status,
       paymentProofUrl: booking.paymentProofUrl,
       paymentDeadline: booking.paymentDeadline,
+      rejectReason: booking.rejectReason,
       createdAt: booking.createdAt,
     };
   }

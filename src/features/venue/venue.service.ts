@@ -14,6 +14,6 @@ export class VenueService {
       );
     }
 
-    return venue;
+    return VenueMapper.toResponse(venue);
   }
 }

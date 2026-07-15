@@ -8,27 +8,22 @@ import { success } from "zod";
 
 export class AuthController {
   static async loginUser(req: Request, res: Response) {
-    const {body} = validate(AuthValidation.LOGIN_USER, { body: req?.body });
+    const { body } = validate(AuthValidation.LOGIN_USER, { body: req?.body });
 
     const { token, safeUser } = await AuthService.loginUser({ body });
 
-    res.cookie(
-      "token",
-      token ,
-      {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
-    );
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     res.status(StatusCodes.OK).json({
-        success: true,
-        message: 'Login success',
-        data: safeUser,
-        token: token
-    })
+      success: true,
+      message: "Login success",
+      data: safeUser,
+    });
   }
   static async registerUser(req: Request, res: Response) {
     const { body } = validate(AuthValidation.REGISTER_USER, {
@@ -43,15 +38,28 @@ export class AuthController {
     });
   }
 
-  static async getMe(_req: Request, res: Response){
-    const {payload} = res?.locals
-    const user = await AuthService.getMe(payload?.sub)
+  static async getMe(_req: Request, res: Response) {
+    const { payload } = res?.locals;
+    const user = await AuthService.getMe(payload?.sub);
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "Current user fetched successfully",
-      data: user
-    })
+      data: user,
+    });
+  }
 
+  static async logoutUser(_req: Request, res: Response) {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Logout success",
+      data: null,
+    });
   }
 }

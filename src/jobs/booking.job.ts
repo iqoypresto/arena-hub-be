@@ -4,7 +4,7 @@ import { BookingRepository } from "../features/booking/booking.repository";
 
 export class BookingJob {
   static start() {
-    console.log("\n[Booking Job] Started");
+   
 
     cron.schedule("* * * * *", async () => {
       try {

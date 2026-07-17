@@ -16,6 +16,7 @@ type VenueWithRelations = Prisma.VenueGetPayload<{
         sportType: true;
         pricePerHour: true;
         status: true;
+        imageUrl: true;
       };
     };
   };
@@ -37,6 +38,8 @@ export class VenueMapper {
         id: facility.id,
         name: facility.name,
         icon: facility.icon,
+        description: facility.description,
+        imageUrl: facility.imageUrl
       })),
 
       operatingHours: venue.operatingHours.map((hour) => ({

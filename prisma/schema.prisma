@@ -82,6 +82,7 @@ model Facility {
   name   String          @unique
   icon   String?
   description String?
+  imageUrl String?
   venues VenueFacility[]
 
   @@map("facilities")

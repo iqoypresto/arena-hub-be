@@ -105,6 +105,7 @@ model Court {
   sportType    SportType
   pricePerHour Decimal     @db.Decimal(12, 2)
   status       CourtStatus @default(AVAILABLE)
+  immageUrl    String?
   createdAt    DateTime    @default(now())      @db.Timestamptz(3)
   updatedAt    DateTime    @updatedAt           @db.Timestamptz(3)
   bookings     Booking[]

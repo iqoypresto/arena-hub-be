@@ -81,6 +81,7 @@ model Facility {
   id     String          @id @default(uuid()) @db.Uuid
   name   String          @unique
   icon   String?
+  description String?
   venues VenueFacility[]
 
   @@map("facilities")

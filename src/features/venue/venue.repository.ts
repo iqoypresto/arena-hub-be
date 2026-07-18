@@ -1,6 +1,5 @@
 import { prisma } from "../../lib/prisma";
 
-
 export class VenueRepository {
   static async getVenue() {
     return prisma.venue.findFirst({
@@ -41,6 +40,7 @@ export class VenueRepository {
             sportType: true,
             pricePerHour: true,
             status: true,
+            imageUrl: true
           },
         },
       },

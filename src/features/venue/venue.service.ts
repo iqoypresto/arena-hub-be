@@ -8,10 +8,7 @@ export class VenueService {
     const venue = await VenueRepository.getVenue();
 
     if (!venue) {
-      throw new ResponseError(
-        StatusCodes.NOT_FOUND,
-        "Venue not found"
-      );
+      throw new ResponseError(StatusCodes.NOT_FOUND, "Venue not found");
     }
 
     return VenueMapper.toResponse(venue);

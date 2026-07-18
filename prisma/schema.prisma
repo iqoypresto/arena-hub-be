@@ -15,11 +15,11 @@ model User {
   password               String
   phoneNumber            String?
   profilePictureUrl      String?
-  profilePicturePublicId String?
   role                   UserRole  @default(PLAYER)
-  createdAt              DateTime  @default(now())      @db.Timestamptz(3)
-  updatedAt              DateTime  @updatedAt           @db.Timestamptz(3)
-  deletedAt              DateTime?                      @db.Timestamptz(3)
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt              DateTime? @db.Timestamptz(3)
+  profilePicturePublicId String?
   bookings               Booking[] @relation("PlayerBookings")
   venue                  Venue?
 
@@ -39,9 +39,9 @@ model Venue {
   bankName       String
   accountHolder  String
   accountNumber  String
-  createdAt      DateTime        @default(now())      @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt           @db.Timestamptz(3)
-  deletedAt      DateTime?                            @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime?       @db.Timestamptz(3)
   courts         Court[]
   operatingHours OperatingHour[]
   facilities     VenueFacility[]
@@ -68,20 +68,22 @@ model VenueImage {
   id           String   @id @default(uuid()) @db.Uuid
   venueId      String   @db.Uuid
   imageUrl     String
-  publicId     String
   displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())       @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt            @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  publicId     String
   venue        Venue    @relation(fields: [venueId], references: [id])
 
   @@map("venue_images")
 }
 
 model Facility {
-  id     String          @id @default(uuid()) @db.Uuid
-  name   String          @unique
-  icon   String?
-  venues VenueFacility[]
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String          @unique
+  icon        String?
+  description String?
+  imageUrl    String?
+  venues      VenueFacility[]
 
   @@map("facilities")
 }
@@ -103,14 +105,15 @@ model Court {
   sportType    SportType
   pricePerHour Decimal     @db.Decimal(12, 2)
   status       CourtStatus @default(AVAILABLE)
-  createdAt    DateTime    @default(now())      @db.Timestamptz(3)
-  updatedAt    DateTime    @updatedAt           @db.Timestamptz(3)
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime    @updatedAt @db.Timestamptz(3)
+  imageUrl     String?
   bookings     Booking[]
   venue        Venue       @relation(fields: [venueId], references: [id])
 
   @@unique([venueId, name])
-  @@map("courts")
   @@index([venueId])
+  @@map("courts")
 }
 
 model Booking {
@@ -123,12 +126,12 @@ model Booking {
   pricePerHour         Decimal       @db.Decimal(12, 2)
   totalPrice           Decimal       @db.Decimal(12, 2)
   paymentProofUrl      String?
-  paymentProofPublicId String?
   paymentDeadline      DateTime?     @db.Timestamptz(3)
   rejectReason         String?
   status               BookingStatus @default(PENDING_PAYMENT)
-  createdAt            DateTime      @default(now())    @db.Timestamptz(3)
-  updatedAt            DateTime      @updatedAt         @db.Timestamptz(3)
+  createdAt            DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(3)
+  paymentProofPublicId String?
   court                Court         @relation(fields: [courtId], references: [id])
   player               User          @relation("PlayerBookings", fields: [playerId], references: [id])
 

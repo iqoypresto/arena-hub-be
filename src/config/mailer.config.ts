@@ -8,8 +8,3 @@ export const transporter = nodemailer.createTransport({
     pass: env.MAIL_PASS,
   },
 });
-
-transporter
-  .verify()
-  .then(() => console.log("[Mailer] SMTP connection ready"))
-  .catch((err) => console.error("[Mailer] SMTP connection failed:", err.message));

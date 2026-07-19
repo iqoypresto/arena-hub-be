@@ -34,10 +34,4 @@ app.use(`${env.API_PREFIX}/dashboard`, DashboardRoute);
 
 app.use(ErrorMiddleware);
 
-app.listen(env.PORT, () => {
-  console.log(`[⚡APP] Application is running on port: ${env.PORT}`);
-
-  BookingJob.start();
-});
-
 export default app;

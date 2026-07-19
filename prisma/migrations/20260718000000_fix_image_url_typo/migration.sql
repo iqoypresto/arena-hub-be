@@ -1,0 +1,1 @@
+ALTER TABLE "courts" RENAME COLUMN "immageUrl" TO "imageUrl";

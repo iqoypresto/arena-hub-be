@@ -20,6 +20,9 @@ model User {
   updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt              DateTime? @db.Timestamptz(3)
   profilePicturePublicId String?
+  isVerified              Boolean   @default(false)
+  verificationToken       String?   @unique
+  verificationTokenExpires DateTime? @db.Timestamptz(3)
   bookings               Booking[] @relation("PlayerBookings")
   venue                  Venue?
 

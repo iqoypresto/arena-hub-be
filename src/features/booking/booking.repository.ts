@@ -23,7 +23,8 @@ export class BookingRepository {
     return await db.booking.create({
       data,
       include: {
-        court: true,
+        court: { include: { venue: true } },
+        player: { select: { id: true, fullName: true, email: true } },
       },
     });
   }
@@ -39,6 +40,7 @@ export class BookingRepository {
           select: {
             id: true,
             name: true,
+            venue: true
           },
         },
       },
@@ -97,7 +99,8 @@ export class BookingRepository {
                     id: true,
                     name: true
                 }
-            }
+            },
+            
         }
     })
   }
@@ -113,6 +116,7 @@ export class BookingRepository {
           select: {
             id: true,
             name: true,
+            venue: true
           },
         },
       },

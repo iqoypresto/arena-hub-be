@@ -34,7 +34,18 @@ export class AuthValidation {
                 .min(1, "Password is required field")
         })
     })
+    static readonly VERIFY_EMAIL = z.object({
+        query: z.object({ token: z.string().min(1, "Token is required") })
+    })
+
+    static readonly RESEND_VERIFICATION = z.object({
+        body: z.object({
+            email: z.string().min(1, "Email is required field").email("Email format is invalid")
+        })
+    })
 }
 
 export type AuthRegisterInput = z.infer<typeof AuthValidation.REGISTER_USER>
 export type AuthLoginInput = z.infer<typeof AuthValidation.LOGIN_USER>
+export type AuthVerifyEmailInput = z.infer<typeof AuthValidation.VERIFY_EMAIL>
+export type AuthResendVerificationInput = z.infer<typeof AuthValidation.RESEND_VERIFICATION>

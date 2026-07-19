@@ -27,4 +27,21 @@ export class AuthRepository {
   static async findById(id: string){
     return prisma.user.findUnique({where: {id}})
   }
+  static async setVerificationToken(userId: string, token: string, expires: Date) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { verificationToken: token, verificationTokenExpires: expires },
+    });
+  }
+
+  static async findByVerificationToken(token: string) {
+    return prisma.user.findUnique({ where: { verificationToken: token } });
+  }
+
+  static async markAsVerified(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true, verificationToken: null, verificationTokenExpires: null },
+    });
+  }
 }

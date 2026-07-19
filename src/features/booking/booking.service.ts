@@ -21,6 +21,9 @@ import { BookingStatus, UserRole } from "@prisma/client";
 import { CloudinaryUtil } from "../../utils/cloudinary.util";
 import { CLOUDINARY_FOLDER } from "../../constants/cloudinary.constant";
 import { JwtPayload } from "jsonwebtoken";
+import { MailerUtil } from "../../utils/mailer.util";
+import { MailerTemplate } from "../../templates/mailer.template";
+import { FormatHelper } from "../../helpers/format.helper";
 
 export class BookingService {
   static async create(playerId: string, { body }: CreateBookingRequest) {
@@ -49,45 +52,67 @@ export class BookingService {
 
     const paymentDeadline = DateHelper.addMinutes(now, 30);
 
-    return prisma.$transaction(async (tx) => {
-      const latestBooking = await BookingRepository.findLatestBookingToday(
-        tx,
-        startOfToday,
-        endOfToday,
-      );
-
-      const bookingCode = BookingHelper.generateBookingCode(
-        now,
-        latestBooking?.bookingCode,
-      );
-
-      const conflict = await CourtRepository.findBookingConflict(
-        tx,
-        court.id,
-        startDatetime,
-        endDatetime,
-      );
-
-      if (conflict) {
-        throw new ResponseError(
-          StatusCodes.CONFLICT,
-          "Selected slot is no longer available.",
+    return prisma
+      .$transaction(async (tx) => {
+        const latestBooking = await BookingRepository.findLatestBookingToday(
+          tx,
+          startOfToday,
+          endOfToday,
         );
-      }
 
-      const booking = await BookingRepository.create(tx, {
-        bookingCode,
-        playerId,
-        courtId: court.id,
-        startDatetime,
-        endDatetime,
-        pricePerHour: court.pricePerHour,
-        totalPrice,
-        paymentDeadline,
+        const bookingCode = BookingHelper.generateBookingCode(
+          now,
+          latestBooking?.bookingCode,
+        );
+
+        const conflict = await CourtRepository.findBookingConflict(
+          tx,
+          court.id,
+          startDatetime,
+          endDatetime,
+        );
+
+        if (conflict) {
+          throw new ResponseError(
+            StatusCodes.CONFLICT,
+            "Selected slot is no longer available.",
+          );
+        }
+
+        const booking = await BookingRepository.create(tx, {
+          bookingCode,
+          playerId,
+          courtId: court.id,
+          startDatetime,
+          endDatetime,
+          pricePerHour: court.pricePerHour,
+          totalPrice,
+          paymentDeadline,
+        });
+
+        return booking;
+      })
+      .then((booking) => {
+        MailerUtil.send(
+          booking.player.email,
+          `Invoice Booking ${booking.bookingCode} - ArenaHub`,
+          MailerTemplate.bookingInvoice(booking.player.fullName, {
+            bookingCode: booking.bookingCode,
+            courtName: booking.court.name,
+            date: FormatHelper.toDateID(booking.startDatetime),
+            time: `${DateHelper.formatTime(booking.startDatetime)} - ${DateHelper.formatTime(booking.endDatetime)}`,
+            totalPrice: FormatHelper.toRupiah(booking.totalPrice.toString()),
+            paymentDeadline: FormatHelper.toDateTimeID(
+              booking.paymentDeadline!,
+            ),
+            bankName: booking.court.venue.bankName,
+            accountNumber: booking.court.venue.accountNumber,
+            accountHolder: booking.court.venue.accountHolder,
+          }),
+        );
+
+        return BookingMapper.toCreatedResponse(booking);
       });
-
-      return BookingMapper.toCreatedResponse(booking);
-    });
   }
 
   static async getMyBookings(playerId: string, { query }: GetMyBookingRequest) {
@@ -219,36 +244,57 @@ export class BookingService {
     const data = {
       status: BookingStatus.CONFIRMED,
     };
-    return prisma.$transaction(async (tx) => {
-      const booking = await BookingRepository.findDetail(tx, params.bookingId);
-
-      if (!booking)
-        throw new ResponseError(StatusCodes.NOT_FOUND, "Booking not found");
-
-      if (booking.status !== BookingStatus.WAITING_VERIFICATION)
-        throw new ResponseError(
-          StatusCodes.CONFLICT,
-          "Booking is not waiting for verification",
+    return prisma
+      .$transaction(async (tx) => {
+        const booking = await BookingRepository.findDetail(
+          tx,
+          params.bookingId,
         );
 
-      if (!booking.paymentProofUrl)
-        throw new ResponseError(
-          StatusCodes.CONFLICT,
-          "Payment proof not founded",
+        if (!booking)
+          throw new ResponseError(StatusCodes.NOT_FOUND, "Booking not found");
+
+        if (booking.status !== BookingStatus.WAITING_VERIFICATION)
+          throw new ResponseError(
+            StatusCodes.CONFLICT,
+            "Booking is not waiting for verification",
+          );
+
+        if (!booking.paymentProofUrl)
+          throw new ResponseError(
+            StatusCodes.CONFLICT,
+            "Payment proof not founded",
+          );
+
+        await BookingRepository.update(tx, booking.id, data);
+
+        const updatedBooking = await BookingRepository.findDetail(
+          tx,
+          booking.id,
         );
 
-      await BookingRepository.update(tx, booking.id, data);
+        if (!updatedBooking)
+          throw new ResponseError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "Failed to retrieved updated booking.",
+          );
 
-      const updatedBooking = await BookingRepository.findDetail(tx, booking.id);
-
-      if (!updatedBooking)
-        throw new ResponseError(
-          StatusCodes.INTERNAL_SERVER_ERROR,
-          "Failed to retrieved updated booking.",
+        return updatedBooking;
+      })
+      .then((updatedBooking) => {
+        MailerUtil.send(
+          updatedBooking.player.email,
+          `Booking ${updatedBooking.bookingCode} Dikonfirmasi - ArenaHub`,
+          MailerTemplate.bookingApproved(updatedBooking.player.fullName, {
+            bookingCode: updatedBooking.bookingCode,
+            courtName: updatedBooking.court.name,
+            date: FormatHelper.toDateID(updatedBooking.startDatetime),
+            time: `${DateHelper.formatTime(updatedBooking.startDatetime)} - ${DateHelper.formatTime(updatedBooking.endDatetime)}`,
+          }),
         );
 
-      return BookingMapper.toOrganizerDetailResponse(updatedBooking);
-    });
+        return BookingMapper.toOrganizerDetailResponse(updatedBooking);
+      });
   }
 
   static async reject({ params, body }: RejectBookingRequest) {
@@ -296,6 +342,16 @@ export class BookingService {
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Failed to retrieve updated booking",
       );
+
+    MailerUtil.send(
+      updatedBooking.player.email,
+      `Bukti Pembayaran Booking ${updatedBooking.bookingCode} Ditolak - ArenaHub`,
+      MailerTemplate.bookingRejected(updatedBooking.player.fullName, {
+        bookingCode: updatedBooking.bookingCode,
+        reason: body.rejectReason,
+        newDeadline: FormatHelper.toDateTimeID(updatedBooking.paymentDeadline!),
+      }),
+    );
 
     return BookingMapper.toOrganizerDetailResponse(updatedBooking);
   }

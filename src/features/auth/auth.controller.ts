@@ -62,4 +62,26 @@ export class AuthController {
       data: null,
     });
   }
+
+  static async verifyEmail(req: Request, res: Response) {
+    const { query } = validate(AuthValidation.VERIFY_EMAIL, { query: req.query });
+    const result = await AuthService.verifyEmail(query.token);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Email verified successfully",
+      data: result,
+    });
+  }
+
+  static async resendVerification(req: Request, res: Response) {
+    const { body } = validate(AuthValidation.RESEND_VERIFICATION, { body: req.body });
+    await AuthService.resendVerification({ body });
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Verification email sent",
+      data: null,
+    });
+  }
 }

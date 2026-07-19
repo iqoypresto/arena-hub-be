@@ -31,6 +31,9 @@ export class VenueMapper {
       phoneNumber: venue.phoneNumber,
       address: venue.address,
       city: venue.city,
+      bankName: venue.bankName,
+      accountHolder: venue.accountHolder,
+      accountNumber: venue.accountNumber,
 
       images: venue.images,
 

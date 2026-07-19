@@ -29,6 +29,13 @@ type BookingDetail = Prisma.BookingGetPayload<{
       select: {
         id: true;
         name: true;
+        venue: {
+          select: {
+            bankName: true,
+            accountHolder: true,
+            accountNumber: true
+          }
+        }
       };
     };
   };
@@ -129,7 +136,13 @@ export class BookingMapper {
       court: {
         id: booking.court.id,
         name: booking.court.name,
+        venue: {
+          bankName: booking.court.venue.bankName,
+          accountHolder: booking.court.venue.accountHolder,
+          accountNumber: booking.court.venue.accountNumber,
+        },
       },
+
       date: DateHelper.formatDateKey(booking.startDatetime),
       startTime: DateHelper.formatTime(booking.startDatetime),
       endTime: DateHelper.formatTime(booking.endDatetime),

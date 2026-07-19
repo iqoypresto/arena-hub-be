@@ -10,6 +10,7 @@ import { BookingRoute } from "./features/booking/booking.route";
 import { VenueRoute } from "./features/venue/venue.route";
 import { BookingJob } from "./jobs/booking.job";
 import { DashboardRoute } from "./features/dashboard/dashboard.route";
+import "./config/mailer.config";
 
 const app = express();
 

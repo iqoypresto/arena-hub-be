@@ -1,3 +1,4 @@
+import { DayOfWeek, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class VenueRepository {
@@ -45,5 +46,32 @@ export class VenueRepository {
         },
       },
     });
+  }
+  static async findByAdminId(venueAdminId: string) {
+    return prisma.venue.findUnique({
+      where: { venueAdminId },
+    });
+  }
+
+  static async update(venueId: string, data: Prisma.VenueUpdateInput) {
+    return prisma.venue.update({
+      where: { id: venueId },
+      data,
+    });
+  }
+
+  static async upsertOperatingHours(
+    venueId: string,
+    hours: { dayOfWeek: DayOfWeek; openTime: Date; closeTime: Date; isClosed: boolean }[],
+  ) {
+    return prisma.$transaction(
+      hours.map((hour) =>
+        prisma.operatingHour.upsert({
+          where: { venueId_dayOfWeek: { venueId, dayOfWeek: hour.dayOfWeek } },
+          create: { venueId, ...hour },
+          update: { openTime: hour.openTime, closeTime: hour.closeTime, isClosed: hour.isClosed },
+        }),
+      ),
+    );
   }
 }

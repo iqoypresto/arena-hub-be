@@ -16,8 +16,8 @@ export class SlotHelper {
     const closingTime = new Date(bookingDate);
 
     closingTime.setHours(
-      closeTime.getUTCHours(),
-      closeTime.getUTCMinutes(),
+      closeTime.getHours(),
+      closeTime.getMinutes(),
       0,
       0,
     );
